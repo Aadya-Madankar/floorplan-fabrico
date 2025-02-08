@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageDisplay } from "@/components/ImageDisplay";
 import { ImageUpload } from "@/components/ImageUpload";
 import { RunwareService, type GeneratedImage } from "@/services/RunwareService";
-import { MessageSquarePlus, Image as ImageIcon } from "lucide-react";
+import { MessageSquarePlus, Image as ImageIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -39,7 +39,7 @@ const Index = () => {
     setIsGenerating(true);
     try {
       const result = await runwareService.generateImage({
-        positivePrompt: `architectural floor plan, ${prompt}`,
+        positivePrompt: `architectural 2D floor plan blueprint, top-down view, ${prompt}`,
       });
       setGeneratedImage(result);
       toast.success("Floor plan generated successfully!");
@@ -52,19 +52,42 @@ const Index = () => {
   };
 
   const handleImageUpload = async (file: File) => {
-    // TODO: Implement image-to-image generation
     toast.info("Image-to-image generation coming soon!");
+  };
+
+  const handleDownload = async () => {
+    if (!generatedImage?.imageURL) {
+      toast.error("No floor plan available to download");
+      return;
+    }
+
+    try {
+      const response = await fetch(generatedImage.imageURL);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'floor-plan.webp';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Floor plan downloaded successfully!");
+    } catch (error) {
+      toast.error("Failed to download floor plan");
+      console.error(error);
+    }
   };
 
   return (
     <div className="min-h-screen bg-architectural-50 p-6">
       <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-architectural-900">
-            Floor Plan Generator
+          <h1 className="text-4xl font-bold text-[#9b87f5]">
+            VAAR-AI
           </h1>
           <p className="text-architectural-600 max-w-2xl mx-auto">
-            Generate beautiful architectural floor plans using AI. Simply describe your vision
+            Generate architectural 2D floor plan blueprints using AI. Simply describe your vision
             or upload a reference image.
           </p>
         </div>
@@ -108,12 +131,13 @@ const Index = () => {
           </TabsList>
 
           <div className="mt-8 grid gap-8 lg:grid-cols-2">
-            <TabsContent value="text" className="m-0">
+            <TabsContent value="text" className="m-0 mx-auto max-w-md lg:col-span-2">
               <div className="space-y-4">
                 <Input
-                  placeholder="Describe your floor plan (e.g., 'modern 2-bedroom apartment with open kitchen')"
+                  placeholder="Describe your floor plan (e.g., '2-bedroom apartment with open kitchen and dining area')"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
+                  className="text-center"
                 />
                 <Button
                   onClick={handleGenerate}
@@ -125,7 +149,7 @@ const Index = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="image" className="m-0">
+            <TabsContent value="image" className="m-0 mx-auto max-w-md lg:col-span-2">
               <div className="space-y-4">
                 <ImageUpload onImageSelect={handleImageUpload} />
                 <Button
@@ -143,6 +167,18 @@ const Index = () => {
                 imageUrl={generatedImage?.imageURL}
                 isLoading={isGenerating}
               />
+              {generatedImage?.imageURL && (
+                <div className="mt-4 flex justify-center">
+                  <Button
+                    onClick={handleDownload}
+                    className="gap-2"
+                    variant="outline"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Floor Plan
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </Tabs>
