@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageDisplay } from "@/components/ImageDisplay";
 import { ImageUpload } from "@/components/ImageUpload";
+import { Interior3DView } from "@/components/Interior3DView";
 import { RunwareService, type GeneratedImage } from "@/services/RunwareService";
-import { MessageSquarePlus, Image as ImageIcon, Download } from "lucide-react";
+import { MessageSquarePlus, Image as ImageIcon, Download, Cube } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -87,7 +88,7 @@ const Index = () => {
             VAAR-AI
           </h1>
           <p className="text-architectural-600 max-w-2xl mx-auto">
-            Generate architectural 2D floor plan blueprints using AI. Simply describe your vision
+            Generate architectural 2D floor plan blueprints and 3D interiors using AI. Simply describe your vision
             or upload a reference image.
           </p>
         </div>
@@ -119,7 +120,7 @@ const Index = () => {
         )}
 
         <Tabs defaultValue="text" className="animate-slideUp">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-3">
             <TabsTrigger value="text" className="flex items-center gap-2">
               <MessageSquarePlus className="h-4 w-4" />
               Text to Plan
@@ -127,6 +128,10 @@ const Index = () => {
             <TabsTrigger value="image" className="flex items-center gap-2">
               <ImageIcon className="h-4 w-4" />
               Image to Plan
+            </TabsTrigger>
+            <TabsTrigger value="interior3d" className="flex items-center gap-2">
+              <Cube className="h-4 w-4" />
+              3D Interior
             </TabsTrigger>
           </TabsList>
 
@@ -159,6 +164,23 @@ const Index = () => {
                 >
                   Generate from Image
                 </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="interior3d" className="m-0 mx-auto max-w-md lg:col-span-2">
+              <div className="space-y-4">
+                <Input
+                  placeholder="Describe your interior (e.g., 'modern living room with large windows')"
+                  className="text-center"
+                />
+                <Button
+                  onClick={() => toast.info("3D interior generation coming soon!")}
+                  disabled={true}
+                  className="w-full"
+                >
+                  Generate 3D Interior
+                </Button>
+                <Interior3DView isLoading={false} />
               </div>
             </TabsContent>
 
