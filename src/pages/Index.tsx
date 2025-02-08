@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,7 +7,7 @@ import { ImageDisplay } from "@/components/ImageDisplay";
 import { ImageUpload } from "@/components/ImageUpload";
 import { Interior3DView } from "@/components/Interior3DView";
 import { RunwareService, type GeneratedImage } from "@/services/RunwareService";
-import { MessageSquarePlus, Image as ImageIcon, Download, Cube } from "lucide-react";
+import { MessageSquarePlus, Image as ImageIcon, Download, Box } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -130,7 +129,7 @@ const Index = () => {
               Image to Plan
             </TabsTrigger>
             <TabsTrigger value="interior3d" className="flex items-center gap-2">
-              <Cube className="h-4 w-4" />
+              <Box className="h-4 w-4" />
               3D Interior
             </TabsTrigger>
           </TabsList>
