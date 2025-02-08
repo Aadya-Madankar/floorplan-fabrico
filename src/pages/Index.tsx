@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -5,15 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageDisplay } from "@/components/ImageDisplay";
 import { ImageUpload } from "@/components/ImageUpload";
-import { Interior3DView } from "@/components/Interior3DView";
 import { RunwareService, type GeneratedImage } from "@/services/RunwareService";
-import { MessageSquarePlus, Image as ImageIcon, Download, Box } from "lucide-react";
+import { MessageSquarePlus, Image as ImageIcon, Box } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
   const [prompt, setPrompt] = useState("");
+  const [interiorPrompt, setInteriorPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingInterior, setIsGeneratingInterior] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
+  const [generatedInterior, setGeneratedInterior] = useState<GeneratedImage | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [runwareService, setRunwareService] = useState<RunwareService | null>(null);
 
@@ -51,30 +54,55 @@ const Index = () => {
     }
   };
 
+  const handleGenerateInterior = async () => {
+    if (!runwareService) {
+      toast.error("Please enter your Runware API key first");
+      return;
+    }
+    if (!interiorPrompt.trim()) {
+      toast.error("Please enter a prompt");
+      return;
+    }
+
+    setIsGeneratingInterior(true);
+    try {
+      const result = await runwareService.generateImage({
+        positivePrompt: `ultra realistic interior design, 3D rendering, professional architectural visualization, ${interiorPrompt}, 8k uhd, detailed textures, modern lighting, photorealistic materials`,
+      });
+      setGeneratedInterior(result);
+      toast.success("Interior visualization generated successfully!");
+    } catch (error) {
+      toast.error("Failed to generate interior visualization. Please try again.");
+      console.error(error);
+    } finally {
+      setIsGeneratingInterior(false);
+    }
+  };
+
   const handleImageUpload = async (file: File) => {
     toast.info("Image-to-image generation coming soon!");
   };
 
-  const handleDownload = async () => {
-    if (!generatedImage?.imageURL) {
-      toast.error("No floor plan available to download");
+  const handleDownload = async (imageUrl: string | undefined, filename: string) => {
+    if (!imageUrl) {
+      toast.error("No image available to download");
       return;
     }
 
     try {
-      const response = await fetch(generatedImage.imageURL);
+      const response = await fetch(imageUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'floor-plan.webp';
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success("Floor plan downloaded successfully!");
+      toast.success("Image downloaded successfully!");
     } catch (error) {
-      toast.error("Failed to download floor plan");
+      toast.error("Failed to download image");
       console.error(error);
     }
   };
@@ -128,9 +156,9 @@ const Index = () => {
               <ImageIcon className="h-4 w-4" />
               Image to Plan
             </TabsTrigger>
-            <TabsTrigger value="interior3d" className="flex items-center gap-2">
+            <TabsTrigger value="interior" className="flex items-center gap-2">
               <Box className="h-4 w-4" />
-              3D Interior
+              Interior Design
             </TabsTrigger>
           </TabsList>
 
@@ -150,6 +178,23 @@ const Index = () => {
                 >
                   Generate Floor Plan
                 </Button>
+                {generatedImage?.imageURL && (
+                  <div className="mt-4">
+                    <ImageDisplay
+                      imageUrl={generatedImage.imageURL}
+                      isLoading={isGenerating}
+                    />
+                    <div className="mt-4 flex justify-center">
+                      <Button
+                        onClick={() => handleDownload(generatedImage.imageURL, 'floor-plan.webp')}
+                        className="gap-2"
+                        variant="outline"
+                      >
+                        Download Floor Plan
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
@@ -166,41 +211,40 @@ const Index = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="interior3d" className="m-0 mx-auto max-w-md lg:col-span-2">
+            <TabsContent value="interior" className="m-0 mx-auto max-w-md lg:col-span-2">
               <div className="space-y-4">
                 <Input
-                  placeholder="Describe your interior (e.g., 'modern living room with large windows')"
+                  placeholder="Describe your interior design (e.g., 'modern living room with large windows and minimalist furniture')"
+                  value={interiorPrompt}
+                  onChange={(e) => setInteriorPrompt(e.target.value)}
                   className="text-center"
                 />
                 <Button
-                  onClick={() => toast.info("3D interior generation coming soon!")}
-                  disabled={true}
+                  onClick={handleGenerateInterior}
+                  disabled={isGeneratingInterior || !runwareService}
                   className="w-full"
                 >
-                  Generate 3D Interior
+                  Generate Interior Design
                 </Button>
-                <Interior3DView isLoading={false} />
+                {generatedInterior?.imageURL && (
+                  <div className="mt-4">
+                    <ImageDisplay
+                      imageUrl={generatedInterior.imageURL}
+                      isLoading={isGeneratingInterior}
+                    />
+                    <div className="mt-4 flex justify-center">
+                      <Button
+                        onClick={() => handleDownload(generatedInterior.imageURL, 'interior-design.webp')}
+                        className="gap-2"
+                        variant="outline"
+                      >
+                        Download Interior Design
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
-
-            <div className="lg:col-span-2">
-              <ImageDisplay
-                imageUrl={generatedImage?.imageURL}
-                isLoading={isGenerating}
-              />
-              {generatedImage?.imageURL && (
-                <div className="mt-4 flex justify-center">
-                  <Button
-                    onClick={handleDownload}
-                    className="gap-2"
-                    variant="outline"
-                  >
-                    <Download className="h-4 w-4" />
-                    Download Floor Plan
-                  </Button>
-                </div>
-              )}
-            </div>
           </div>
         </Tabs>
       </div>
