@@ -109,10 +109,12 @@ const Index = () => {
     setIsRemodelGenerating(true);
     try {
       const result = await runwareService.generateImage({
-        positivePrompt: `transform only the ${selectedSegment} in this interior: ${remodelPrompt}, maintain all other elements exactly the same, ultra realistic interior design, professional remodeling, 8k uhd, photorealistic materials, focus ONLY on changing the ${selectedSegment}, preserve lighting and composition`,
-        negativePrompt: `changing anything other than the ${selectedSegment}, modifying overall layout, different perspective, different room, different lighting`,
-        strength: 0.6,
-        CFGScale: 8,
+        positivePrompt: `realistic interior design focused on changing only the ${selectedSegment}, ${remodelPrompt}, photorealistic, maintain exact composition and lighting`,
+        negativePrompt: `bad quality, unrealistic, changing other parts, different room layout, different perspective, modified lighting, altered structure`,
+        model: "runware:101@1",
+        strength: 0.45,
+        CFGScale: 12,
+        scheduler: "DPMSolverMultistepScheduler",
       });
       setRemodelImage(result);
       toast.success("Interior remodel generated successfully!");
