@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,16 +6,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageDisplay } from "@/components/ImageDisplay";
 import { ImageUpload } from "@/components/ImageUpload";
 import { RunwareService, type GeneratedImage } from "@/services/RunwareService";
-import { MessageSquarePlus, Image as ImageIcon, Box } from "lucide-react";
+import { MessageSquarePlus, Image as ImageIcon, Box, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
   const [prompt, setPrompt] = useState("");
   const [interiorPrompt, setInteriorPrompt] = useState("");
+  const [remodelPrompt, setRemodelPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingInterior, setIsGeneratingInterior] = useState(false);
+  const [isRemodelGenerating, setIsRemodelGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
   const [generatedInterior, setGeneratedInterior] = useState<GeneratedImage | null>(null);
+  const [remodelImage, setRemodelImage] = useState<GeneratedImage | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [runwareService, setRunwareService] = useState<RunwareService | null>(null);
 
@@ -79,6 +82,39 @@ const Index = () => {
     }
   };
 
+  const handleRemodelImageUpload = async (file: File) => {
+    setUploadedImage(file);
+  };
+
+  const handleGenerateRemodel = async () => {
+    if (!runwareService) {
+      toast.error("Please enter your Runware API key first");
+      return;
+    }
+    if (!uploadedImage) {
+      toast.error("Please upload an interior image first");
+      return;
+    }
+    if (!remodelPrompt.trim()) {
+      toast.error("Please describe how you want to remodel the interior");
+      return;
+    }
+
+    setIsRemodelGenerating(true);
+    try {
+      const result = await runwareService.generateImage({
+        positivePrompt: `transform this interior: ${remodelPrompt}, ultra realistic interior design, professional remodeling, 8k uhd, photorealistic materials, maintain original layout`,
+      });
+      setRemodelImage(result);
+      toast.success("Interior remodel generated successfully!");
+    } catch (error) {
+      toast.error("Failed to generate remodel. Please try again.");
+      console.error(error);
+    } finally {
+      setIsRemodelGenerating(false);
+    }
+  };
+
   const handleImageUpload = async (file: File) => {
     toast.info("Image-to-image generation coming soon!");
   };
@@ -115,8 +151,7 @@ const Index = () => {
             VAAR-AI
           </h1>
           <p className="text-architectural-600 max-w-2xl mx-auto">
-            Generate architectural 2D floor plan blueprints and 3D interiors using AI. Simply describe your vision
-            or upload a reference image.
+            Generate architectural 2D floor plans, interior designs, and remodel existing interiors using AI.
           </p>
         </div>
 
@@ -147,10 +182,10 @@ const Index = () => {
         )}
 
         <Tabs defaultValue="text" className="animate-slideUp">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-3">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-4">
             <TabsTrigger value="text" className="flex items-center gap-2">
               <MessageSquarePlus className="h-4 w-4" />
-              Text to Plan
+              Floor Plan
             </TabsTrigger>
             <TabsTrigger value="image" className="flex items-center gap-2">
               <ImageIcon className="h-4 w-4" />
@@ -158,7 +193,11 @@ const Index = () => {
             </TabsTrigger>
             <TabsTrigger value="interior" className="flex items-center gap-2">
               <Box className="h-4 w-4" />
-              Interior Design
+              Interior
+            </TabsTrigger>
+            <TabsTrigger value="remodel" className="flex items-center gap-2">
+              <Wand2 className="h-4 w-4" />
+              Remodel
             </TabsTrigger>
           </TabsList>
 
@@ -243,6 +282,63 @@ const Index = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="remodel" className="m-0 mx-auto max-w-md lg:col-span-2">
+              <div className="space-y-4">
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Upload Interior Image</h3>
+                  <ImageUpload onImageSelect={handleRemodelImageUpload} />
+                  {uploadedImage && (
+                    <>
+                      <Input
+                        placeholder="Describe your remodeling vision (e.g., 'modern minimalist style with white walls and wooden floors')"
+                        value={remodelPrompt}
+                        onChange={(e) => setRemodelPrompt(e.target.value)}
+                        className="text-center mt-4"
+                      />
+                      <Button
+                        onClick={handleGenerateRemodel}
+                        disabled={isRemodelGenerating || !runwareService}
+                        className="w-full mt-4"
+                      >
+                        Generate Remodel
+                      </Button>
+                    </>
+                  )}
+                </Card>
+                
+                <div className="grid gap-4 mt-4">
+                  {uploadedImage && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Original Interior</h4>
+                      <ImageDisplay
+                        imageUrl={URL.createObjectURL(uploadedImage)}
+                        isLoading={false}
+                      />
+                    </div>
+                  )}
+                  
+                  {remodelImage && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Remodeled Interior</h4>
+                      <ImageDisplay
+                        imageUrl={remodelImage.imageURL}
+                        isLoading={isRemodelGenerating}
+                      />
+                      <div className="mt-4 flex justify-center">
+                        <Button
+                          onClick={() => handleDownload(remodelImage.imageURL, 'remodeled-interior.webp')}
+                          className="gap-2"
+                          variant="outline"
+                        >
+                          Download Remodeled Design
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </TabsContent>
           </div>
