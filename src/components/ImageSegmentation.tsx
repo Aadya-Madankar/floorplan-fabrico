@@ -86,7 +86,6 @@ export const ImageSegmentation = ({ imageUrl, onSegmentSelect }: ImageSegmentati
       // Highlight selected segment
       ctx.fillStyle = 'rgba(155, 135, 245, 0.3)'; // Purple highlight with transparency
       const maskData = clickedSegment.mask.data;
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       
       for (let i = 0; i < maskData.length; i++) {
         if (maskData[i] > 0) {
