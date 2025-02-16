@@ -5,6 +5,7 @@ const API_ENDPOINT = "wss://ws-api.runware.ai/v1";
 
 export interface GenerateImageParams {
   positivePrompt: string;
+  negativePrompt?: string;
   model?: string;
   numberResults?: number;
   outputFormat?: string;
