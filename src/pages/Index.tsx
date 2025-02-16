@@ -8,6 +8,7 @@ import { ImageUpload } from "@/components/ImageUpload";
 import { RunwareService, type GeneratedImage } from "@/services/RunwareService";
 import { MessageSquarePlus, Image as ImageIcon, Box, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { ImageSegmentation } from "@/components/ImageSegmentation";
 
 const Index = () => {
   const [prompt, setPrompt] = useState("");
@@ -22,6 +23,7 @@ const Index = () => {
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [runwareService, setRunwareService] = useState<RunwareService | null>(null);
+  const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
 
   const handleApiKeySubmit = () => {
     if (!apiKey.trim()) {
@@ -99,11 +101,15 @@ const Index = () => {
       toast.error("Please describe how you want to remodel the interior");
       return;
     }
+    if (!selectedSegment) {
+      toast.error("Please select a part of the interior to remodel");
+      return;
+    }
 
     setIsRemodelGenerating(true);
     try {
       const result = await runwareService.generateImage({
-        positivePrompt: `transform this interior: ${remodelPrompt}, ultra realistic interior design, professional remodeling, 8k uhd, photorealistic materials, maintain original layout`,
+        positivePrompt: `transform only the ${selectedSegment} in this interior: ${remodelPrompt}, maintain all other elements exactly the same, ultra realistic interior design, professional remodeling, 8k uhd, photorealistic materials`,
       });
       setRemodelImage(result);
       toast.success("Interior remodel generated successfully!");
@@ -292,19 +298,30 @@ const Index = () => {
                   <ImageUpload onImageSelect={handleRemodelImageUpload} />
                   {uploadedImage && (
                     <>
-                      <Input
-                        placeholder="Describe your remodeling vision (e.g., 'modern minimalist style with white walls and wooden floors')"
-                        value={remodelPrompt}
-                        onChange={(e) => setRemodelPrompt(e.target.value)}
-                        className="text-center mt-4"
-                      />
-                      <Button
-                        onClick={handleGenerateRemodel}
-                        disabled={isRemodelGenerating || !runwareService}
-                        className="w-full mt-4"
-                      >
-                        Generate Remodel
-                      </Button>
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium mb-2">Select Area to Remodel</h4>
+                        <ImageSegmentation
+                          imageUrl={URL.createObjectURL(uploadedImage)}
+                          onSegmentSelect={setSelectedSegment}
+                        />
+                      </div>
+                      {selectedSegment && (
+                        <>
+                          <Input
+                            placeholder={`Describe how you want to remodel the ${selectedSegment} (e.g., 'modern wooden flooring with warm tones')`}
+                            value={remodelPrompt}
+                            onChange={(e) => setRemodelPrompt(e.target.value)}
+                            className="text-center mt-4"
+                          />
+                          <Button
+                            onClick={handleGenerateRemodel}
+                            disabled={isRemodelGenerating || !runwareService}
+                            className="w-full mt-4"
+                          >
+                            Generate Remodel for {selectedSegment}
+                          </Button>
+                        </>
+                      )}
                     </>
                   )}
                 </Card>
