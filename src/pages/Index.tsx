@@ -109,7 +109,10 @@ const Index = () => {
     setIsRemodelGenerating(true);
     try {
       const result = await runwareService.generateImage({
-        positivePrompt: `transform only the ${selectedSegment} in this interior: ${remodelPrompt}, maintain all other elements exactly the same, ultra realistic interior design, professional remodeling, 8k uhd, photorealistic materials`,
+        positivePrompt: `transform only the ${selectedSegment} in this interior: ${remodelPrompt}, maintain all other elements exactly the same, ultra realistic interior design, professional remodeling, 8k uhd, photorealistic materials, focus ONLY on changing the ${selectedSegment}, preserve lighting and composition`,
+        negativePrompt: `changing anything other than the ${selectedSegment}, modifying overall layout, different perspective, different room, different lighting`,
+        strength: 0.6,
+        CFGScale: 8,
       });
       setRemodelImage(result);
       toast.success("Interior remodel generated successfully!");
