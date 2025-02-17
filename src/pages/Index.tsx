@@ -1,29 +1,61 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImageDisplay } from "@/components/ImageDisplay";
 import { ImageUpload } from "@/components/ImageUpload";
 import { RunwareService, type GeneratedImage } from "@/services/RunwareService";
-import { MessageSquarePlus, Image as ImageIcon, Box, Wand2 } from "lucide-react";
+import { MessageSquarePlus, Image as ImageIcon, Box, Wand2, ThreeDCube, Share2, Download, Ruler } from "lucide-react";
 import { toast } from "sonner";
 import { ImageSegmentation } from "@/components/ImageSegmentation";
+import { Interior3DView } from "@/components/Interior3DView";
+
+interface Dimensions {
+  width: number;
+  length: number;
+  height: number;
+}
+
+interface Template {
+  id: string;
+  name: string;
+  description: string;
+  basePrompt: string;
+}
+
+const floorPlanTemplates: Template[] = [
+  {
+    id: "studio",
+    name: "Studio Apartment",
+    description: "An efficient studio apartment with smart space usage",
+    basePrompt: "efficient studio apartment floor plan with smart space usage, open concept living"
+  },
+  {
+    id: "luxury",
+    name: "Luxury Home",
+    description: "A spacious luxury home with multiple amenities",
+    basePrompt: "spacious luxury home floor plan with multiple bedrooms, modern amenities, elegant design"
+  },
+  {
+    id: "office",
+    name: "Open Office",
+    description: "An open office with collaborative workspaces",
+    basePrompt: "open office floor plan with collaborative workspaces, meeting rooms, and break areas"
+  },
+  // ... Add more templates based on the provided list
+];
 
 const Index = () => {
-  const [prompt, setPrompt] = useState("");
-  const [interiorPrompt, setInteriorPrompt] = useState("");
-  const [remodelPrompt, setRemodelPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingInterior, setIsGeneratingInterior] = useState(false);
-  const [isRemodelGenerating, setIsRemodelGenerating] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [dimensions, setDimensions] = useState<Dimensions>({ width: 0, length: 0, height: 0 });
+  const [viewMode, setViewMode] = useState<"2D" | "3D">("2D");
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
-  const [generatedInterior, setGeneratedInterior] = useState<GeneratedImage | null>(null);
-  const [remodelImage, setRemodelImage] = useState<GeneratedImage | null>(null);
-  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [runwareService, setRunwareService] = useState<RunwareService | null>(null);
-  const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleApiKeySubmit = () => {
     if (!apiKey.trim()) {
@@ -34,20 +66,43 @@ const Index = () => {
     toast.success("API key saved successfully");
   };
 
+  const handleDimensionsChange = (field: keyof Dimensions, value: string) => {
+    setDimensions(prev => ({
+      ...prev,
+      [field]: parseFloat(value) || 0
+    }));
+  };
+
+  const generatePrompt = () => {
+    const template = floorPlanTemplates.find(t => t.id === selectedTemplate);
+    if (!template) return "";
+
+    return `${template.basePrompt}, dimensions: ${dimensions.width}x${dimensions.length} meters, 
+    architectural 2D floor plan blueprint, top-down view, detailed measurements, professional 
+    architectural drawing style, clear room labels, furniture layout`;
+  };
+
   const handleGenerate = async () => {
     if (!runwareService) {
       toast.error("Please enter your Runware API key first");
       return;
     }
-    if (!prompt.trim()) {
-      toast.error("Please enter a prompt");
+    if (!selectedTemplate) {
+      toast.error("Please select a template");
+      return;
+    }
+    if (dimensions.width <= 0 || dimensions.length <= 0) {
+      toast.error("Please enter valid dimensions");
       return;
     }
 
     setIsGenerating(true);
     try {
       const result = await runwareService.generateImage({
-        positivePrompt: `architectural 2D floor plan blueprint, top-down view, ${prompt}`,
+        positivePrompt: generatePrompt(),
+        negativePrompt: "blurry, unclear labels, distorted proportions",
+        model: "runware:101@1",
+        CFGScale: 10,
       });
       setGeneratedImage(result);
       toast.success("Floor plan generated successfully!");
@@ -59,115 +114,52 @@ const Index = () => {
     }
   };
 
-  const handleGenerateInterior = async () => {
-    if (!runwareService) {
-      toast.error("Please enter your Runware API key first");
-      return;
-    }
-    if (!interiorPrompt.trim()) {
-      toast.error("Please enter a prompt");
+  const handleShare = async () => {
+    if (!generatedImage?.imageURL) {
+      toast.error("No floor plan to share");
       return;
     }
 
-    setIsGeneratingInterior(true);
     try {
-      const result = await runwareService.generateImage({
-        positivePrompt: `ultra realistic interior design, 3D rendering, professional architectural visualization, ${interiorPrompt}, 8k uhd, detailed textures, modern lighting, photorealistic materials`,
-      });
-      setGeneratedInterior(result);
-      toast.success("Interior visualization generated successfully!");
+      await navigator.clipboard.writeText(generatedImage.imageURL);
+      toast.success("Image URL copied to clipboard!");
     } catch (error) {
-      toast.error("Failed to generate interior visualization. Please try again.");
-      console.error(error);
-    } finally {
-      setIsGeneratingInterior(false);
+      toast.error("Failed to copy URL");
     }
   };
 
-  const handleRemodelImageUpload = async (file: File) => {
-    setUploadedImage(file);
-  };
-
-  const handleGenerateRemodel = async () => {
-    if (!runwareService) {
-      toast.error("Please enter your Runware API key first");
-      return;
-    }
-    if (!uploadedImage) {
-      toast.error("Please upload an interior image first");
-      return;
-    }
-    if (!remodelPrompt.trim()) {
-      toast.error("Please describe how you want to remodel the interior");
-      return;
-    }
-    if (!selectedSegment) {
-      toast.error("Please select a part of the interior to remodel");
-      return;
-    }
-
-    setIsRemodelGenerating(true);
-    try {
-      const result = await runwareService.generateImage({
-        positivePrompt: `realistic interior design focused on changing only the ${selectedSegment}, ${remodelPrompt}, photorealistic, maintain exact composition and lighting`,
-        negativePrompt: `bad quality, unrealistic, changing other parts, different room layout, different perspective, modified lighting, altered structure`,
-        model: "runware:101@1",
-        strength: 0.45,
-        CFGScale: 12,
-        scheduler: "DPMSolverMultistepScheduler",
-      });
-      setRemodelImage(result);
-      toast.success("Interior remodel generated successfully!");
-    } catch (error) {
-      toast.error("Failed to generate remodel. Please try again.");
-      console.error(error);
-    } finally {
-      setIsRemodelGenerating(false);
-    }
-  };
-
-  const handleImageUpload = async (file: File) => {
-    toast.info("Image-to-image generation coming soon!");
-  };
-
-  const handleDownload = async (imageUrl: string | undefined, filename: string) => {
-    if (!imageUrl) {
-      toast.error("No image available to download");
+  const handleDownload = async () => {
+    if (!generatedImage?.imageURL) {
+      toast.error("No floor plan to download");
       return;
     }
 
     try {
-      const response = await fetch(imageUrl);
+      const response = await fetch(generatedImage.imageURL);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename;
+      a.download = `floor-plan-${selectedTemplate}.png`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success("Image downloaded successfully!");
+      toast.success("Floor plan downloaded successfully!");
     } catch (error) {
-      toast.error("Failed to download image");
-      console.error(error);
+      toast.error("Failed to download floor plan");
     }
   };
 
   return (
     <div className="min-h-screen bg-architectural-50 p-6">
-      <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-[#9b87f5]">
-            VAAR-AI
-          </h1>
-          <p className="text-architectural-600 max-w-2xl mx-auto">
-            Generate architectural 2D floor plans, interior designs, and remodel existing interiors using AI.
-          </p>
+      <div className="max-w-6xl mx-auto space-y-8">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-[#9b87f5] mb-4">VAAR-AI Floor Plan Generator</h1>
         </div>
 
-        {!runwareService && (
-          <Card className="p-6 max-w-md mx-auto animate-slideUp">
+        {!runwareService ? (
+          <Card className="p-6 max-w-md mx-auto">
             <h2 className="text-xl font-semibold mb-4">Enter your API Key</h2>
             <div className="flex gap-2">
               <Input
@@ -178,193 +170,117 @@ const Index = () => {
               />
               <Button onClick={handleApiKeySubmit}>Save</Button>
             </div>
-            <p className="text-sm text-architectural-500 mt-2">
-              Don't have an API key? Visit{" "}
-              <a
-                href="https://runware.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
-              >
-                Runware
-              </a>
-            </p>
           </Card>
-        )}
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-2">
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Design Your Floor Plan</h2>
+              
+              {/* Template Selection */}
+              <div className="space-y-4 mb-6">
+                <label className="block text-sm font-medium">Select Template</label>
+                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {floorPlanTemplates.map(template => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <Tabs defaultValue="text" className="animate-slideUp">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-4">
-            <TabsTrigger value="text" className="flex items-center gap-2">
-              <MessageSquarePlus className="h-4 w-4" />
-              Floor Plan
-            </TabsTrigger>
-            <TabsTrigger value="image" className="flex items-center gap-2">
-              <ImageIcon className="h-4 w-4" />
-              Image to Plan
-            </TabsTrigger>
-            <TabsTrigger value="interior" className="flex items-center gap-2">
-              <Box className="h-4 w-4" />
-              Interior
-            </TabsTrigger>
-            <TabsTrigger value="remodel" className="flex items-center gap-2">
-              <Wand2 className="h-4 w-4" />
-              Remodel
-            </TabsTrigger>
-          </TabsList>
+              {/* Dimensions Input */}
+              <div className="space-y-4 mb-6">
+                <label className="block text-sm font-medium">Dimensions (meters)</label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Input
+                      type="number"
+                      placeholder="Width"
+                      value={dimensions.width || ""}
+                      onChange={(e) => handleDimensionsChange("width", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      type="number"
+                      placeholder="Length"
+                      value={dimensions.length || ""}
+                      onChange={(e) => handleDimensionsChange("length", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      type="number"
+                      placeholder="Height"
+                      value={dimensions.height || ""}
+                      onChange={(e) => handleDimensionsChange("height", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-2">
-            <TabsContent value="text" className="m-0 mx-auto max-w-md lg:col-span-2">
-              <div className="space-y-4">
-                <Input
-                  placeholder="Describe your floor plan (e.g., '2-bedroom apartment with open kitchen and dining area')"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="text-center"
-                />
-                <Button
-                  onClick={handleGenerate}
-                  disabled={isGenerating || !runwareService}
-                  className="w-full"
-                >
-                  Generate Floor Plan
-                </Button>
-                {generatedImage?.imageURL && (
-                  <div className="mt-4">
+              <Button
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="w-full"
+              >
+                Generate Floor Plan
+              </Button>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Preview</h2>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setViewMode(viewMode === "2D" ? "3D" : "2D")}
+                  >
+                    {viewMode === "2D" ? <ThreeDCube className="h-4 w-4" /> : <Ruler className="h-4 w-4" />}
+                    {viewMode === "2D" ? "View 3D" : "View 2D"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShare}
+                    disabled={!generatedImage}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Share
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownload}
+                    disabled={!generatedImage}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                  </Button>
+                </div>
+              </div>
+
+              {generatedImage && (
+                <div className="relative">
+                  {viewMode === "2D" ? (
                     <ImageDisplay
                       imageUrl={generatedImage.imageURL}
                       isLoading={isGenerating}
                     />
-                    <div className="mt-4 flex justify-center">
-                      <Button
-                        onClick={() => handleDownload(generatedImage.imageURL, 'floor-plan.webp')}
-                        className="gap-2"
-                        variant="outline"
-                      >
-                        Download Floor Plan
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="image" className="m-0 mx-auto max-w-md lg:col-span-2">
-              <div className="space-y-4">
-                <ImageUpload onImageSelect={handleImageUpload} />
-                <Button
-                  onClick={() => toast.info("Image-to-image generation coming soon!")}
-                  disabled={true}
-                  className="w-full"
-                >
-                  Generate from Image
-                </Button>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="interior" className="m-0 mx-auto max-w-md lg:col-span-2">
-              <div className="space-y-4">
-                <Input
-                  placeholder="Describe your interior design (e.g., 'modern living room with large windows and minimalist furniture')"
-                  value={interiorPrompt}
-                  onChange={(e) => setInteriorPrompt(e.target.value)}
-                  className="text-center"
-                />
-                <Button
-                  onClick={handleGenerateInterior}
-                  disabled={isGeneratingInterior || !runwareService}
-                  className="w-full"
-                >
-                  Generate Interior Design
-                </Button>
-                {generatedInterior?.imageURL && (
-                  <div className="mt-4">
-                    <ImageDisplay
-                      imageUrl={generatedInterior.imageURL}
-                      isLoading={isGeneratingInterior}
-                    />
-                    <div className="mt-4 flex justify-center">
-                      <Button
-                        onClick={() => handleDownload(generatedInterior.imageURL, 'interior-design.webp')}
-                        className="gap-2"
-                        variant="outline"
-                      >
-                        Download Interior Design
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="remodel" className="m-0 mx-auto max-w-md lg:col-span-2">
-              <div className="space-y-4">
-                <Card className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Upload Interior Image</h3>
-                  <ImageUpload onImageSelect={handleRemodelImageUpload} />
-                  {uploadedImage && (
-                    <>
-                      <div className="mt-4">
-                        <h4 className="text-sm font-medium mb-2">Select Area to Remodel</h4>
-                        <ImageSegmentation
-                          imageUrl={URL.createObjectURL(uploadedImage)}
-                          onSegmentSelect={setSelectedSegment}
-                        />
-                      </div>
-                      {selectedSegment && (
-                        <>
-                          <Input
-                            placeholder={`Describe how you want to remodel the ${selectedSegment} (e.g., 'modern wooden flooring with warm tones')`}
-                            value={remodelPrompt}
-                            onChange={(e) => setRemodelPrompt(e.target.value)}
-                            className="text-center mt-4"
-                          />
-                          <Button
-                            onClick={handleGenerateRemodel}
-                            disabled={isRemodelGenerating || !runwareService}
-                            className="w-full mt-4"
-                          >
-                            Generate Remodel for {selectedSegment}
-                          </Button>
-                        </>
-                      )}
-                    </>
-                  )}
-                </Card>
-                
-                <div className="grid gap-4 mt-4">
-                  {uploadedImage && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">Original Interior</h4>
-                      <ImageDisplay
-                        imageUrl={URL.createObjectURL(uploadedImage)}
-                        isLoading={false}
-                      />
-                    </div>
-                  )}
-                  
-                  {remodelImage && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">Remodeled Interior</h4>
-                      <ImageDisplay
-                        imageUrl={remodelImage.imageURL}
-                        isLoading={isRemodelGenerating}
-                      />
-                      <div className="mt-4 flex justify-center">
-                        <Button
-                          onClick={() => handleDownload(remodelImage.imageURL, 'remodeled-interior.webp')}
-                          className="gap-2"
-                          variant="outline"
-                        >
-                          Download Remodeled Design
-                        </Button>
-                      </div>
-                    </div>
+                  ) : (
+                    <Interior3DView imageUrl={generatedImage.imageURL} />
                   )}
                 </div>
-              </div>
-            </TabsContent>
+              )}
+            </Card>
           </div>
-        </Tabs>
+        )}
       </div>
     </div>
   );
