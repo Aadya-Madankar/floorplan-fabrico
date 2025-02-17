@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -43,8 +44,7 @@ const floorPlanTemplates: Template[] = [
     name: "Open Office",
     description: "An open office with collaborative workspaces",
     basePrompt: "open office floor plan with collaborative workspaces, meeting rooms, and break areas"
-  },
-  // ... Add more templates based on the provided list
+  }
 ];
 
 const Index = () => {
@@ -76,9 +76,7 @@ const Index = () => {
     const template = floorPlanTemplates.find(t => t.id === selectedTemplate);
     if (!template) return "";
 
-    return `${template.basePrompt}, dimensions: ${dimensions.width}x${dimensions.length} meters, 
-    architectural 2D floor plan blueprint, top-down view, detailed measurements, professional 
-    architectural drawing style, clear room labels, furniture layout`;
+    return `${template.basePrompt}, dimensions: ${dimensions.width}x${dimensions.length} meters, architectural 2D floor plan blueprint, top-down view, detailed measurements, professional architectural drawing style, clear room labels, furniture layout`;
   };
 
   const handleGenerate = async () => {
@@ -103,11 +101,12 @@ const Index = () => {
         model: "runware:101@1",
         CFGScale: 10,
       });
+      console.log("Generated image result:", result);
       setGeneratedImage(result);
       toast.success("Floor plan generated successfully!");
     } catch (error) {
+      console.error("Generation error:", error);
       toast.error("Failed to generate floor plan. Please try again.");
-      console.error(error);
     } finally {
       setIsGenerating(false);
     }
@@ -265,7 +264,11 @@ const Index = () => {
                 </div>
               </div>
 
-              {generatedImage && (
+              {!generatedImage ? (
+                <div className="h-[500px] flex items-center justify-center text-gray-500">
+                  <p>Your generated floor plan will appear here</p>
+                </div>
+              ) : (
                 <div className="relative">
                   {viewMode === "2D" ? (
                     <ImageDisplay
