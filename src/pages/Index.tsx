@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -274,7 +273,10 @@ const Index = () => {
                       isLoading={isGenerating}
                     />
                   ) : (
-                    <Interior3DView />
+                    <Interior3DView
+                      imageUrl={generatedImage.imageURL}
+                      isLoading={isGenerating}
+                    />
                   )}
                 </div>
               )}
