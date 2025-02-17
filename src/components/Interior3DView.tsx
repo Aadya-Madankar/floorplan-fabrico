@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Interior3DViewProps {
   isLoading?: boolean;
@@ -16,7 +17,12 @@ export const Interior3DView = ({ isLoading, imageUrl }: Interior3DViewProps) => 
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
   useEffect(() => {
-    if (!mountRef.current || !imageUrl) return;
+    if (!mountRef.current || !imageUrl) {
+      console.log("Missing mountRef or imageUrl:", { mountRef: !!mountRef.current, imageUrl });
+      return;
+    }
+
+    console.log("Loading 3D view with image URL:", imageUrl);
 
     // Setup scene
     const scene = new THREE.Scene();
@@ -50,52 +56,64 @@ export const Interior3DView = ({ isLoading, imageUrl }: Interior3DViewProps) => 
 
     // Load floor plan texture
     const textureLoader = new THREE.TextureLoader();
-    textureLoader.load(imageUrl, (texture) => {
-      // Create floor with floor plan texture
-      const floorGeometry = new THREE.PlaneGeometry(10, 10);
-      const floorMaterial = new THREE.MeshStandardMaterial({ 
-        map: texture,
-        side: THREE.DoubleSide
-      });
-      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-      floor.rotation.x = -Math.PI / 2; // Rotate to be horizontal
-      floor.position.y = -0.5;
-      scene.add(floor);
+    textureLoader.load(
+      imageUrl,
+      (texture) => {
+        console.log("Texture loaded successfully");
+        // Create floor with floor plan texture
+        const floorGeometry = new THREE.PlaneGeometry(10, 10);
+        const floorMaterial = new THREE.MeshStandardMaterial({ 
+          map: texture,
+          side: THREE.DoubleSide
+        });
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+        floor.position.y = -0.5;
+        scene.add(floor);
+      },
+      (progress) => {
+        console.log("Loading texture:", (progress.loaded / progress.total * 100) + '%');
+      },
+      (error) => {
+        console.error("Error loading texture:", error);
+        toast.error("Failed to load floor plan texture");
+      }
+    );
 
-      // Create walls
-      const wallHeight = 3;
-      const wallMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xcccccc,
-        transparent: true,
-        opacity: 0.5
-      });
-
-      // Create four walls
-      const wallGeometry = new THREE.PlaneGeometry(10, wallHeight);
-      
-      const frontWall = new THREE.Mesh(wallGeometry, wallMaterial);
-      frontWall.position.z = -5;
-      frontWall.position.y = wallHeight/2 - 0.5;
-      scene.add(frontWall);
-
-      const backWall = new THREE.Mesh(wallGeometry, wallMaterial);
-      backWall.position.z = 5;
-      backWall.position.y = wallHeight/2 - 0.5;
-      backWall.rotation.y = Math.PI;
-      scene.add(backWall);
-
-      const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
-      leftWall.position.x = -5;
-      leftWall.position.y = wallHeight/2 - 0.5;
-      leftWall.rotation.y = Math.PI / 2;
-      scene.add(leftWall);
-
-      const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
-      rightWall.position.x = 5;
-      rightWall.position.y = wallHeight/2 - 0.5;
-      rightWall.rotation.y = -Math.PI / 2;
-      scene.add(rightWall);
+    // Create walls with more visible material
+    const wallHeight = 3;
+    const wallMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x9ba1a6,
+      transparent: true,
+      opacity: 0.3,
+      side: THREE.DoubleSide
     });
+
+    // Create four walls
+    const wallGeometry = new THREE.PlaneGeometry(10, wallHeight);
+    
+    const frontWall = new THREE.Mesh(wallGeometry, wallMaterial);
+    frontWall.position.z = -5;
+    frontWall.position.y = wallHeight/2 - 0.5;
+    scene.add(frontWall);
+
+    const backWall = new THREE.Mesh(wallGeometry, wallMaterial);
+    backWall.position.z = 5;
+    backWall.position.y = wallHeight/2 - 0.5;
+    backWall.rotation.y = Math.PI;
+    scene.add(backWall);
+
+    const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
+    leftWall.position.x = -5;
+    leftWall.position.y = wallHeight/2 - 0.5;
+    leftWall.rotation.y = Math.PI / 2;
+    scene.add(leftWall);
+
+    const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
+    rightWall.position.x = 5;
+    rightWall.position.y = wallHeight/2 - 0.5;
+    rightWall.rotation.y = -Math.PI / 2;
+    scene.add(rightWall);
 
     // Animation loop
     const animate = () => {
@@ -191,4 +209,3 @@ export const Interior3DView = ({ isLoading, imageUrl }: Interior3DViewProps) => 
     </Card>
   );
 };
-
