@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ImageDisplay } from "@/components/ImageDisplay";
 import { ImageUpload } from "@/components/ImageUpload";
 import { RunwareService, type GeneratedImage } from "@/services/RunwareService";
-import { MessageSquarePlus, Image as ImageIcon, Box, Wand2, ThreeDCube, Share2, Download, Ruler } from "lucide-react";
+import { MessageSquarePlus, Image as ImageIcon, Box, Wand2, Cube, Share2, Download, Ruler } from "lucide-react";
 import { toast } from "sonner";
 import { ImageSegmentation } from "@/components/ImageSegmentation";
 import { Interior3DView } from "@/components/Interior3DView";
@@ -242,7 +241,7 @@ const Index = () => {
                     size="sm"
                     onClick={() => setViewMode(viewMode === "2D" ? "3D" : "2D")}
                   >
-                    {viewMode === "2D" ? <ThreeDCube className="h-4 w-4" /> : <Ruler className="h-4 w-4" />}
+                    {viewMode === "2D" ? <Cube className="h-4 w-4" /> : <Ruler className="h-4 w-4" />}
                     {viewMode === "2D" ? "View 3D" : "View 2D"}
                   </Button>
                   <Button
@@ -274,7 +273,7 @@ const Index = () => {
                       isLoading={isGenerating}
                     />
                   ) : (
-                    <Interior3DView imageUrl={generatedImage.imageURL} />
+                    <Interior3DView />
                   )}
                 </div>
               )}
